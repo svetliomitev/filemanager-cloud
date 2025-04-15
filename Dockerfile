@@ -9,3 +9,4 @@ RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-av
     && sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
 COPY . /var/www/html
 RUN chown -R www-data:www-data /var/www/html && chmod -R 755 /var/www/html
+RUN echo "upload_max_filesize=10G\npost_max_size=10G\nmax_execution_time=600\nmax_input_time=600" > /usr/local/etc/php/conf.d/uploads.ini
