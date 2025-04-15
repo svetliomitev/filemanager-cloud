@@ -51,6 +51,9 @@ if (is_readable($userFolder)) {
         a, a:hover {
             color: #90caf9;
         }
+        .progress {
+            height: 20px;
+        }
     </style>
 </head>
 <body>
@@ -79,11 +82,15 @@ if (is_readable($userFolder)) {
                 <div class="alert alert-danger">🚫 You’ve exceeded your quota. Uploading is disabled.</div>
             <?php endif; ?>
 
-            <form action="upload.php" method="POST" enctype="multipart/form-data" class="mb-4" <?php if ($quota_exceeded) echo 'style="pointer-events: none; opacity: 0.6;"'; ?>>
-                <div class="input-group">
-                    <input type="file" name="file" class="form-control" required>
+            <form id="uploadForm" enctype="multipart/form-data" class="mb-4" <?php if ($quota_exceeded) echo 'style="pointer-events: none; opacity: 0.6;"'; ?>>
+                <div class="input-group mb-2">
+                    <input type="file" name="file" id="fileInput" class="form-control" required>
                     <button type="submit" class="btn btn-primary">Upload</button>
                 </div>
+                <div class="progress" style="display: none;">
+                    <div class="progress-bar" role="progressbar" style="width: 0%">0%</div>
+                </div>
+                <div id="uploadStatus" class="mt-2"></div>
             </form>
         </div>
 
@@ -105,5 +112,55 @@ if (is_readable($userFolder)) {
         </div>
 
     </div>
+
+    <script>
+    document.getElementById('uploadForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const form = e.target;
+        const fileInput = document.getElementById('fileInput');
+        const file = fileInput.files[0];
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', 'upload.php', true);
+
+        const progressContainer = document.querySelector('.progress');
+        const progressBar = document.querySelector('.progress-bar');
+        const status = document.getElementById('uploadStatus');
+
+        progressContainer.style.display = 'block';
+        progressBar.style.width = '0%';
+        progressBar.classList.remove('bg-success', 'bg-danger');
+        progressBar.textContent = '0%';
+        status.innerHTML = '';
+
+        xhr.upload.onprogress = function(e) {
+            if (e.lengthComputable) {
+                const percent = Math.round((e.loaded / e.total) * 100);
+                progressBar.style.width = percent + '%';
+                progressBar.textContent = percent + '%';
+            }
+        };
+
+        xhr.onload = function() {
+            if (xhr.status === 200) {
+                status.innerHTML = '<span class="text-success">✅ Upload complete!</span>';
+                progressBar.classList.add('bg-success');
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                status.innerHTML = '<span class="text-danger">❌ Upload failed.</span>';
+                progressBar.classList.add('bg-danger');
+            }
+        };
+
+        xhr.onerror = function() {
+            status.innerHTML = '<span class="text-danger">❌ Upload failed (connection error).</span>';
+            progressBar.classList.add('bg-danger');
+        };
+
+        xhr.send(formData);
+    });
+    </script>
 </body>
 </html>
