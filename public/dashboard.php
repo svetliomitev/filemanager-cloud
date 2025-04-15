@@ -40,7 +40,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['foldername'])) {
     }
 }
 
-$files = array_diff(scandir($user_dir), ['.', '..']);
+if (!is_dir($userFolder)) {
+    mkdir($userFolder, 0777, true); // attempt to create it
+}
+
+if (is_readable($userFolder)) {
+    $files = array_diff(scandir($userFolder), ['.', '..']);
+} else {
+    $files = [];
+    echo "<div class='alert alert-warning'>⚠️ Cannot access user folder: $userFolder</div>";
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
