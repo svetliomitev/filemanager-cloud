@@ -25,7 +25,7 @@ Set credentials for the admin, mail relay, and default quota.
 
 3. **Build & Run**
 ```bash
-docker-compose up --build -d
+docker compose up --build -d
 ```
 
 4. **First-Time Setup**
