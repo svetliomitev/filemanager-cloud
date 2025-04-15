@@ -1,10 +1,11 @@
 <?php
+
 // 1. Abort if DB already exists
 if (file_exists(__DIR__ . '/../data/database.sqlite')) {
     die("✅ Database already initialized.");
 }
 
-// 2. Prepare folder structure
+// 2. Create necessary directories with safe permissions
 @mkdir(__DIR__ . '/../data', 0777, true);
 @mkdir(__DIR__ . '/../storage', 0777, true);
 @mkdir(__DIR__ . '/../shared', 0777, true);
@@ -46,8 +47,7 @@ $db->exec("CREATE TABLE shares (
     FOREIGN KEY(user_id) REFERENCES users(id)
 )");
 
-
-// 5. Load .env using Composer autoload
+// 5. Load environment variables using Composer
 require_once __DIR__ . '/../vendor/autoload.php';
 
 try {
@@ -57,14 +57,19 @@ try {
     die("❌ Failed to load .env: " . $e->getMessage());
 }
 
-// 6. Insert admin user
-$admin_email = $_ENV['ADMIN_EMAIL'] ?? 'admin@bgdemo.top';
-$admin_user  = $_ENV['ADMIN_USER'] ?? 'admin';
-$admin_pass  = $_ENV['ADMIN_PASS'] ?? 'S1neQU@n0n#9';
-$full_name   = $_ENV['ADMIN_NAME'] ?? 'Svetoslav Mitev';
+// 6. Optional debug: Print loaded environment
+// echo "<pre>"; print_r($_ENV); echo "</pre>";
 
+// 7. Read admin config from .env
+$admin_user  = $_ENV['ADMIN_USER']  ?? 'admin';
+$admin_email = $_ENV['ADMIN_EMAIL'] ?? 'admin@bgdemo.top';
+$admin_pass  = $_ENV['ADMIN_PASS']  ?? 'S1neQU@n0n#9';
+$full_name   = $_ENV['ADMIN_NAME']  ?? 'Svetoslav Mitev';
+
+// 8. Hash password
 $hashed_pass = password_hash($admin_pass, PASSWORD_BCRYPT);
 
+// 9. Insert admin user
 $stmt = $db->prepare("INSERT INTO users (username, email, password, full_name, quota_gb) VALUES (?, ?, ?, ?, 999)");
 $stmt->bindValue(1, $admin_user);
 $stmt->bindValue(2, $admin_email);
@@ -72,7 +77,7 @@ $stmt->bindValue(3, $hashed_pass);
 $stmt->bindValue(4, $full_name);
 
 if ($stmt->execute()) {
-    echo "✅ Installation complete. Admin user <strong>$admin_user</strong> created.<br>";
+    echo "✅ Installation complete.<br>Admin user <strong>$admin_user</strong> created.<br>";
     echo "This script will now delete itself.";
     unlink(__FILE__);
 } else {
