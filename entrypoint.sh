@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# ✅ Fix ownership and permissions at container runtime (not just build time)
+# 🔧 Ensure all required folders exist and are writable
 echo "🔧 Fixing folder permissions..."
-chown -R www-data:www-data /var/www/html/storage /var/www/html/data /var/www/html/shared
-chmod -R 777 /var/www/html/storage /var/www/html/data /var/www/html/shared
+chown -R www-data:www-data /var/www/html/storage /var/www/html/data /var/www/html/shared /var/www/html/tmp
+chmod -R 777 /var/www/html/storage /var/www/html/data /var/www/html/shared /var/www/html/tmp
 
-# ✅ Run install script if DB does not exist
+# 🛠 Run install.php if DB is missing
 if [ ! -f /var/www/html/data/database.sqlite ]; then
   echo "🛠 Running install.php automatically..."
   php /var/www/html/public/install.php
@@ -13,6 +13,6 @@ else
   echo "✅ Database already exists. Skipping install."
 fi
 
-# ✅ Start Apache in foreground
+# 🚀 Start Apache
 echo "🚀 Starting Apache..."
 exec apache2-foreground
