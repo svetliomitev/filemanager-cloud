@@ -34,7 +34,7 @@ RUN mkdir -p /var/www/html/data /var/www/html/storage /var/www/html/shared \
 
 
 # ✅ Apache/PHP upload and performance settings
-RUN echo "upload_max_filesize=10G\npost_max_size=10G\nmax_execution_time=600\nmax_input_time=600" > /usr/local/etc/php/conf.d/uploads.ini
+RUN echo "upload_max_filesize=20G\npost_max_size=20G\nmemory_limit=4G\nmax_execution_time=7200\nmax_input_time=7200" > /usr/local/etc/php/conf.d/uploads.ini
 
 # ✅ Add entrypoint to auto-run install.php
 COPY entrypoint.sh /entrypoint.sh
