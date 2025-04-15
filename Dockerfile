@@ -1,6 +1,7 @@
 FROM php:8.3-apache
 
 RUN apt-get update && apt-get install -y \
+    git unzip zip \
     libsqlite3-dev sqlite3 sendmail \
     && docker-php-ext-install pdo pdo_sqlite
 
