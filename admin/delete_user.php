@@ -1,0 +1,1 @@
+<?php echo 'Delete user logic here'; ?>

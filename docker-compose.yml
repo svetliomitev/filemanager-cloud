@@ -1,0 +1,18 @@
+version: '3.9'
+services:
+  web:
+    build: .
+    container_name: filemanager_cloud
+    ports:
+      - "8080:80"
+    volumes:
+      - ./storage:/var/www/html/storage
+      - ./data:/var/www/html/data
+      - ./public:/var/www/html/public
+      - ./admin:/var/www/html/admin
+      - ./includes:/var/www/html/includes
+      - ./api:/var/www/html/api
+      - ./shared:/var/www/html/shared
+      - ./config:/var/www/html/config
+      - ./.env:/var/www/html/.env
+    restart: unless-stopped
