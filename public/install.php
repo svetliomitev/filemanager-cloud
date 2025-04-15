@@ -1,15 +1,18 @@
 <?php
+// 1. Abort if DB already exists
 if (file_exists(__DIR__ . '/../data/database.sqlite')) {
     die("✅ Database already initialized.");
 }
 
+// 2. Prepare folder structure
 @mkdir(__DIR__ . '/../data', 0777, true);
 @mkdir(__DIR__ . '/../storage', 0777, true);
 @mkdir(__DIR__ . '/../shared', 0777, true);
 
+// 3. Create SQLite database
 $db = new SQLite3(__DIR__ . '/../data/database.sqlite');
 
-// Create tables
+// 4. Create tables
 $db->exec("CREATE TABLE users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT UNIQUE,
@@ -43,16 +46,22 @@ $db->exec("CREATE TABLE shares (
     FOREIGN KEY(user_id) REFERENCES users(id)
 )");
 
-// Load .env
-require_once __DIR__ . '/../vendor/autoload.php';
-$dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/..');
-$dotenv->load();
 
-// Admin user from .env
-$admin_email = $_ENV['ADMIN_EMAIL'] ?? 'admin@example.com';
+// 5. Load .env using Composer autoload
+require_once __DIR__ . '/../vendor/autoload.php';
+
+try {
+    $dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/../');
+    $dotenv->load();
+} catch (Exception $e) {
+    die("❌ Failed to load .env: " . $e->getMessage());
+}
+
+// 6. Insert admin user
+$admin_email = $_ENV['ADMIN_EMAIL'] ?? 'admin@bgdemo.top';
 $admin_user  = $_ENV['ADMIN_USER'] ?? 'admin';
-$admin_pass  = $_ENV['ADMIN_PASS'] ?? 'admin123';
-$full_name   = $_ENV['ADMIN_NAME'] ?? 'Admin';
+$admin_pass  = $_ENV['ADMIN_PASS'] ?? 'S1neQU@n0n#9';
+$full_name   = $_ENV['ADMIN_NAME'] ?? 'Svetoslav Mitev';
 
 $hashed_pass = password_hash($admin_pass, PASSWORD_BCRYPT);
 
@@ -61,8 +70,12 @@ $stmt->bindValue(1, $admin_user);
 $stmt->bindValue(2, $admin_email);
 $stmt->bindValue(3, $hashed_pass);
 $stmt->bindValue(4, $full_name);
-$stmt->execute();
 
-echo "✅ Installation complete. Admin user <strong>$admin_user</strong> created.<br>";
-echo "This script will now delete itself.";
-unlink(__FILE__);
+if ($stmt->execute()) {
+    echo "✅ Installation complete. Admin user <strong>$admin_user</strong> created.<br>";
+    echo "This script will now delete itself.";
+    unlink(__FILE__);
+} else {
+    echo "❌ Failed to insert admin user.<br>";
+    echo "SQLite error: " . $db->lastErrorMsg();
+}

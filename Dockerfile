@@ -13,18 +13,24 @@ ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
 RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf \
     && sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
 
+# ✅ Install Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+COPY composer.json composer.lock* /var/www/html/
+WORKDIR /var/www/html
+RUN composer install
+
+# ✅ Now copy the full app
 COPY . /var/www/html
 
+# ✅ Apache/PHP Config
 RUN echo "upload_max_filesize=10G\npost_max_size=10G\nmax_execution_time=600\nmax_input_time=600" > /usr/local/etc/php/conf.d/uploads.ini
 
+# ✅ Ensure folders exist and are writable
 RUN mkdir -p /var/www/html/data /var/www/html/storage /var/www/html/shared \
     && chown -R www-data:www-data /var/www/html/data /var/www/html/storage /var/www/html/shared \
     && chmod -R 777 /var/www/html/data /var/www/html/storage /var/www/html/shared
 
-# ✅ Add entrypoint for auto-install
-# Copy the entrypoint script and make it executable
+# ✅ Add entrypoint to run install.php
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
-
-# Use it as the container's entrypoint
 ENTRYPOINT ["/entrypoint.sh"]
