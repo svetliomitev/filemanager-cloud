@@ -15,4 +15,4 @@ services:
       - ./shared:/var/www/html/shared
       - ./config:/var/www/html/config
       - ./.env:/var/www/html/.env
-    restart: awlays
+    restart: always
