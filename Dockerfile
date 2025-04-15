@@ -22,6 +22,9 @@ RUN mkdir -p /var/www/html/data /var/www/html/storage /var/www/html/shared \
     && chmod -R 777 /var/www/html/data /var/www/html/storage /var/www/html/shared
 
 # ✅ Add entrypoint for auto-install
+# Copy the entrypoint script and make it executable
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
+
+# Use it as the container's entrypoint
 ENTRYPOINT ["/entrypoint.sh"]
