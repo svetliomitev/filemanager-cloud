@@ -24,18 +24,18 @@ COPY composer.json composer.lock* /var/www/html/
 WORKDIR /var/www/html
 RUN composer install
 
-# ✅ Copy full application after Composer runs
+# ✅ Copy full application AFTER Composer install
 COPY . /var/www/html
 
 # ✅ Apache/PHP upload and performance settings
 RUN echo "upload_max_filesize=10G\npost_max_size=10G\nmax_execution_time=600\nmax_input_time=600" > /usr/local/etc/php/conf.d/uploads.ini
 
-# ✅ Ensure required writable directories exist with proper permissions
+# ✅ Ensure writable directories with correct ownership and permissions
 RUN mkdir -p /var/www/html/data /var/www/html/storage /var/www/html/shared \
     && chown -R www-data:www-data /var/www/html/data /var/www/html/storage /var/www/html/shared \
     && chmod -R 777 /var/www/html/data /var/www/html/storage /var/www/html/shared
 
-# ✅ Add entrypoint script to run install.php on startup
+# ✅ Add entrypoint to auto-run install.php
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
