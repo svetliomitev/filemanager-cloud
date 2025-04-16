@@ -1,4 +1,5 @@
-FROM php:8.3-apache
+FROM php:8.3-fpm
+# Build custom PHP-FPM container, use with a clean Apache reverse proxy outside
 
 # Install system packages and PHP extensions
 RUN apt-get update && apt-get install -y \
