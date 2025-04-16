@@ -38,8 +38,9 @@ RUN mkdir -p /var/www/html/storage \
              /var/www/html/data \
              /var/www/html/shared \
              /var/www/html/tmp/upload_chunks \
-    && chown -R www-data:www-data /var/www/html/storage /var/www/html/data /var/www/html/shared /var/www/html/tmp \
-    && chmod -R 777 /var/www/html/storage /var/www/html/data /var/www/html/shared /var/www/html/tmp
+             /var/www/html/chunks_tmp \
+    && chown -R www-data:www-data /var/www/html/storage /var/www/html/data /var/www/html/shared /var/www/html/tmp /var/www/html/chunks_tmp \
+    && chmod -R 777 /var/www/html/storage /var/www/html/data /var/www/html/shared /var/www/html/tmp /var/www/html/chunks_tmp
 
 # Add entrypoint
 COPY entrypoint.sh /entrypoint.sh

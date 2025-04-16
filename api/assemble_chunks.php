@@ -1,64 +1,41 @@
 <?php
-ini_set('display_errors', 1);
-ini_set('log_errors', 1);
-error_reporting(E_ALL);
+session_start();
 
-require_once __DIR__ . '/../includes/auth.php';
-require_once __DIR__ . '/../includes/quota.php';
+$username = $_SESSION['username'] ?? 'guest';
+$data = json_decode(file_get_contents('php://input'), true);
 
-if (!is_logged_in()) {
-    http_response_code(403);
-    exit("Not authorized");
+$uploadId = $data['uploadId'] ?? '';
+$totalChunks = (int)($data['totalChunks'] ?? 0);
+$filename = $data['name'] ?? 'unnamed';
+$path = $data['path'] ?? '';
+
+$tmpDir = __DIR__ . '/../chunks_tmp/' . $username . '/' . $uploadId;
+$destDir = realpath(__DIR__ . '/../storage/' . $username . '/' . $path);
+
+// Ensure destination folder exists
+if (!is_dir($destDir)) {
+    mkdir($destDir, 0777, true);
 }
 
-$user = current_user();
-$username = $user['username'];
-$storageDir = __DIR__ . '/../storage/' . $username;
-$tmpDir = __DIR__ . '/../tmp/uploads/' . $username;
+$output = $destDir . '/' . $filename;
+$outFile = fopen($output, 'wb');
 
-@mkdir($storageDir, 0777, true);
-
-$uploadId = $_POST['uploadId'] ?? null;
-$fileName = basename($_POST['fileName'] ?? '');
-$totalChunks = (int) ($_POST['chunks'] ?? 0);
-
-if (!$uploadId || !$fileName || !$totalChunks) {
-    http_response_code(400);
-    exit("Missing fields");
-}
-
-// Enforce quota
-$quota_bytes = $user['quota_gb'] * 1024 * 1024 * 1024;
-$current_usage = get_user_storage_usage($storageDir);
-
-// Calculate total size
-$totalSize = 0;
+// Assemble the chunks
 for ($i = 0; $i < $totalChunks; $i++) {
-    $chunkPath = "$tmpDir/$uploadId.part$i";
-    if (!file_exists($chunkPath)) {
+    $chunkPath = $tmpDir . '/' . $i;
+    if (file_exists($chunkPath)) {
+        fwrite($outFile, file_get_contents($chunkPath));
+    } else {
+        fclose($outFile);
         http_response_code(400);
-        exit("Missing chunk $i");
+        echo "❌ Missing chunk $i";
+        exit;
     }
-    $totalSize += filesize($chunkPath);
 }
+fclose($outFile);
 
-if (($current_usage + $totalSize) > $quota_bytes) {
-    http_response_code(413);
-    exit("Upload exceeds quota");
-}
+// Clean up chunk files
+array_map('unlink', glob($tmpDir . '/*'));
+rmdir($tmpDir);
 
-// Reassemble
-$destination = $storageDir . '/' . $fileName;
-$fp = fopen($destination, 'wb');
-
-for ($i = 0; $i < $totalChunks; $i++) {
-    $chunkPath = "$tmpDir/$uploadId.part$i";
-    $chunk = fopen($chunkPath, 'rb');
-    stream_copy_to_stream($chunk, $fp);
-    fclose($chunk);
-    unlink($chunkPath);
-}
-fclose($fp);
-
-http_response_code(200);
-echo "✅ Upload complete.";
+echo "✅ File assembled as $filename";

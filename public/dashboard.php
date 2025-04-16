@@ -84,10 +84,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['new_folder'])) {
     <button type="submit" class="btn btn-primary">Create Folder</button>
   </form>
 
-  <div class="mb-4" id="drag-drop-area"></div>
+  <div class="mb-4 p-5 text-center border border-light rounded" style="background-color: #212529;">
+    <div class="mb-3">
+      <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" class="bi bi-cloud-arrow-up mb-2" viewBox="0 0 16 16">
+        <path fill-rule="evenodd" d="M8 0a5.53 5.53 0 0 1 5.326 4.023A4.5 4.5 0 1 1 8 16H4.5a3.5 3.5 0 1 1 0-7H5v-1a3 3 0 0 1 6 0v1h.5a2.5 2.5 0 1 1 0 5H8a4.5 4.5 0 0 1 0-9v1z"/>
+        <path fill-rule="evenodd" d="M7.646 4.854a.5.5 0 0 1 .708 0L10 6.5l-.707.707L8.5 6.414V10.5a.5.5 0 0 1-1 0V6.414L6.707 7.207 6 6.5l2-2z"/>
+      </svg>
+      <h5>Drag & Drop files here</h5>
+      <p class="text-muted">or click below to browse</p>
+    </div>
+    <div id="drag-drop-area"></div>
+  </div>
 
   <script>
-    const uppy = new Uppy.Core({
+    const uppy = new Uppy.Uppy({
         restrictions: { maxFileSize: 20 * 1024 * 1024 * 1024 },
         autoProceed: true
     });
@@ -124,6 +134,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['new_folder'])) {
 
         alert('Upload complete!');
         location.reload();
+    });
+
+    uppy.on('error', err => console.error('Uppy error:', err));
+    uppy.on('upload-error', (file, error, response) => {
+        console.error('Upload error on', file.name, error, response);
     });
   </script>
 
