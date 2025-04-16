@@ -1,4 +1,12 @@
 <?php
+error_log("🧪 This is a test log line from upload.php");
+
+// Enable error reporting and logging to a custom file
+ini_set('display_errors', 1);
+ini_set('log_errors', 1);
+ini_set('error_log', '/tmp/php-errors.log');
+error_reporting(E_ALL);
+
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/quota.php';
 
@@ -11,8 +19,13 @@ $user = current_user();
 $username = $user['username'];
 $userFolder = __DIR__ . '/../storage/' . $username;
 
+// Ensure user folder exists
 if (!is_dir($userFolder)) {
-    mkdir($userFolder, 0777, true);
+    if (!mkdir($userFolder, 0777, true)) {
+        error_log("❌ Failed to create user folder: $userFolder");
+        http_response_code(500);
+        die("❌ Server error: Cannot create user folder.");
+    }
 }
 
 // Enforce quota
@@ -31,21 +44,27 @@ if (isset($_FILES['file']) && $_FILES['file']['error'] === UPLOAD_ERR_OK) {
     $filename = basename($_FILES['file']['name']);
     $destination = $userFolder . '/' . $filename;
 
-    // Optional: prevent overwrite
+    // Prevent overwrite
     if (file_exists($destination)) {
         http_response_code(409); // Conflict
         die("❌ A file with that name already exists.");
     }
 
-    // Move file
-    if (move_uploaded_file($_FILES['file']['tmp_name'], $destination)) {
-        http_response_code(200);
-        echo "✅ Upload successful.";
-    } else {
+    // Try to move the uploaded file
+    if (!move_uploaded_file($_FILES['file']['tmp_name'], $destination)) {
+        error_log("❌ move_uploaded_file failed!");
+        error_log("Temp path: " . $_FILES['file']['tmp_name']);
+        error_log("Destination: $destination");
+        error_log("Size: " . $_FILES['file']['size']);
+        error_log("Disk Free Space: " . disk_free_space(dirname($destination)));
+
         http_response_code(500);
         echo "❌ Failed to move uploaded file.";
+        exit;
     }
 
+    http_response_code(200);
+    echo "✅ Upload successful.";
 } else {
     http_response_code(400);
     echo "❌ No file uploaded or upload error.";

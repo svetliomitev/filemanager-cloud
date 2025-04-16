@@ -24,20 +24,18 @@ COPY composer.json composer.lock* /var/www/html/
 WORKDIR /var/www/html
 RUN composer install
 
-# ✅ Copy full application AFTER Composer install
+# ✅ PHP custom config — copied BEFORE app to prevent overwrite
+COPY php/99-custom.ini /usr/local/etc/php/conf.d/99-custom.ini
+
+# ✅ Copy full application AFTER config
 COPY . /var/www/html
 
-# ✅ Fix permissions AFTER copying files
-COPY . /var/www/html
-
-# 🔧 Ensure writable temp folder and large file support
+# ✅ Create temp upload dir
 RUN mkdir -p /var/www/html/tmp \
     && chown www-data:www-data /var/www/html/tmp \
-    && chmod 777 /var/www/html/tmp \
-    && echo "upload_tmp_dir=/var/www/html/tmp" >> /usr/local/etc/php/conf.d/uploads.ini \
-    && echo "upload_max_filesize=20G\npost_max_size=20G\nmemory_limit=4G\nmax_execution_time=7200\nmax_input_time=7200" >> /usr/local/etc/php/conf.d/uploads.ini
+    && chmod 777 /var/www/html/tmp
 
-# ✅ Add entrypoint to auto-run install.php
+# ✅ Add entrypoint
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
