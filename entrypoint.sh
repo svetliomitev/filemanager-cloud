@@ -19,6 +19,6 @@ else
   echo "✅ Database already exists. Skipping install."
 fi
 
-# 🚀 Start PHP-FPM (this is the correct process for php:8.3-fpm)
-echo "🚀 Starting PHP-FPM..."
-exec php-fpm
+# 🚀 Start Apache (required for php:8.3-apache)
+echo "🚀 Starting Apache..."
+exec apache2-foreground

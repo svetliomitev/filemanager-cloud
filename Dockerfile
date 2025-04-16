@@ -1,34 +1,39 @@
-FROM php:8.3-fpm
+FROM php:8.3-apache
 
-# Install required packages
+# Install system packages and PHP extensions
 RUN apt-get update && apt-get install -y \
     git unzip zip \
     libsqlite3-dev sqlite3 sendmail \
     && docker-php-ext-install pdo pdo_sqlite
 
-# ✅ Install Composer
+# Enable Apache rewrite module
+RUN a2enmod rewrite
+
+# Configure sendmail path
+RUN echo "sendmail_path = /usr/sbin/sendmail -t -i" >> /usr/local/etc/php/php.ini
+
+# Set Apache document root
+ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
+RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf \
+    && sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
+
+# Install Composer and dependencies
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
-
-# ✅ Working directory for app
+COPY composer.json composer.lock* /var/www/html/
 WORKDIR /var/www/html
-
-# ✅ Copy app (after Composer dependencies)
-COPY composer.json composer.lock* ./
 RUN composer install
-COPY . .
 
-# ✅ Set correct permissions and create temp dirs
-RUN mkdir -p /var/www/html/tmp /var/www/html/data /var/www/html/storage /var/www/html/shared \
-    && chown -R www-data:www-data /var/www/html \
-    && chmod -R 777 /var/www/html/tmp /var/www/html/data /var/www/html/storage /var/www/html/shared
+# Copy application files after dependencies
+COPY . /var/www/html
 
-# ✅ Add PHP config for upload + logging
-COPY php/99-custom.ini /usr/local/etc/php/conf.d/99-custom.ini
+# PHP config for uploads and error logging
+RUN mkdir -p /var/www/html/tmp \
+    && chown www-data:www-data /var/www/html/tmp \
+    && chmod 777 /var/www/html/tmp \
+    && echo -e "upload_max_filesize=20G\npost_max_size=20G\nmemory_limit=4G\nmax_execution_time=7200\nmax_input_time=7200\nupload_tmp_dir=/var/www/html/tmp\nlog_errors=On\nerror_log=/var/www/html/data/php_errors.log" \
+    > /usr/local/etc/php/conf.d/99-custom.ini
 
-# ✅ Add entrypoint for install
+# Add entrypoint
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
-
-# ✅ Default CMD for php-fpm
-CMD ["php-fpm"]
