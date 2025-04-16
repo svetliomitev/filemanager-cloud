@@ -23,15 +23,23 @@ COPY composer.json composer.lock* /var/www/html/
 WORKDIR /var/www/html
 RUN composer install
 
-# Copy application files after dependencies
+# Copy full application AFTER dependencies
 COPY . /var/www/html
 
-# PHP config for uploads and error logging
+# PHP config for uploads and logging
 RUN mkdir -p /var/www/html/tmp \
     && chown www-data:www-data /var/www/html/tmp \
     && chmod 777 /var/www/html/tmp \
     && echo -e "upload_max_filesize=20G\npost_max_size=20G\nmemory_limit=4G\nmax_execution_time=7200\nmax_input_time=7200\nupload_tmp_dir=/var/www/html/tmp\nlog_errors=On\nerror_log=/var/www/html/data/php_errors.log" \
     > /usr/local/etc/php/conf.d/99-custom.ini
+
+# ✅ Create required folders for the app (Uppy chunked upload support)
+RUN mkdir -p /var/www/html/storage \
+             /var/www/html/data \
+             /var/www/html/shared \
+             /var/www/html/tmp/upload_chunks \
+    && chown -R www-data:www-data /var/www/html/storage /var/www/html/data /var/www/html/shared /var/www/html/tmp \
+    && chmod -R 777 /var/www/html/storage /var/www/html/data /var/www/html/shared /var/www/html/tmp
 
 # Add entrypoint
 COPY entrypoint.sh /entrypoint.sh

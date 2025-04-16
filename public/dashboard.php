@@ -3,164 +3,119 @@ require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/quota.php';
 
 if (!is_logged_in()) {
-    header('Location: index.php');
+    header("Location: index.php");
     exit;
 }
 
 $user = current_user();
 $username = $user['username'];
-$full_name = $user['full_name'];
-$quota_gb = $user['quota_gb'];
-
-$userFolder = __DIR__ . '/../storage/' . $username;
-
-if (!is_dir($userFolder)) {
-    if (!mkdir($userFolder, 0777, true)) {
-        die("❌ Failed to create user folder: $userFolder");
-    }
-}
-
-$usage_bytes = get_user_storage_usage($userFolder);
-$usage_gb = round($usage_bytes / (1024 ** 3), 2);
-$quota_exceeded = $usage_gb >= $quota_gb;
-
-$files = [];
-if (is_readable($userFolder)) {
-    $files = array_diff(scandir($userFolder), ['.', '..']);
-}
+$userFolder = realpath(__DIR__ . '/../storage/' . $username);
+$quotaGB = $user['quota_gb'];
+$usedBytes = get_user_storage_usage($userFolder);
+$usedGB = round($usedBytes / (1024 * 1024 * 1024), 2);
+$percentUsed = round(($usedBytes / ($quotaGB * 1024 * 1024 * 1024)) * 100, 1);
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Dashboard - <?php echo htmlspecialchars($full_name); ?></title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body {
-            background-color: #121212;
-            color: #fff;
-        }
-        .card {
-            background-color: #1f1f1f;
-            border: 1px solid #333;
-        }
-        .navbar, .dropdown-menu {
-            background-color: #1a1a1a;
-        }
-        a, a:hover {
-            color: #90caf9;
-        }
-        .progress {
-            height: 20px;
-        }
-    </style>
+    <title>Dashboard - File Manager</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://releases.transloadit.com/uppy/v3.13.0/uppy.min.css" rel="stylesheet">
+    <script src="https://releases.transloadit.com/uppy/v3.13.0/uppy.min.js"></script>
 </head>
-<body>
-    <nav class="navbar navbar-expand-lg navbar-dark px-3 mb-4 border-bottom border-secondary">
-        <a class="navbar-brand" href="#">FileManager</a>
-        <div class="collapse navbar-collapse">
-            <ul class="navbar-nav me-auto">
-                <li class="nav-item"><a class="nav-link" href="dashboard.php">Dashboard</a></li>
-                <li class="nav-item"><a class="nav-link" href="#">Sharing</a></li>
-                <?php if ((int)$user['quota_gb'] === 999): ?>
-                    <li class="nav-item"><a class="nav-link" href="/admin/index.php">Admin Panel</a></li>
-                <?php endif; ?>
-            </ul>
-            <span class="navbar-text me-3"><?php echo htmlspecialchars($full_name); ?></span>
-            <a class="btn btn-outline-light btn-sm" href="logout.php">Logout</a>
+<body class="bg-dark text-white">
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-secondary mb-4">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="#">FileManager</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav me-auto">
+        <li class="nav-item"><a class="nav-link" href="dashboard.php">Dashboard</a></li>
+        <li class="nav-item"><a class="nav-link" href="logout.php">Logout</a></li>
+      </ul>
+      <span class="navbar-text">
+        Logged in as: <?= htmlspecialchars($username) ?>
+      </span>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+    <h3>Welcome, <?= htmlspecialchars($username) ?></h3>
+
+    <div class="mb-4">
+        <strong>Storage Used:</strong> <?= $usedGB ?> GB / <?= $quotaGB ?> GB (<?= $percentUsed ?>%)
+        <div class="progress">
+            <div class="progress-bar bg-info" role="progressbar" style="width: <?= $percentUsed ?>%;" aria-valuenow="<?= $percentUsed ?>" aria-valuemin="0" aria-valuemax="100"><?= $percentUsed ?>%</div>
         </div>
-    </nav>
-
-    <div class="container">
-
-        <div class="mb-4">
-            <h4>📁 Your Files</h4>
-            <p>Used: <strong><?php echo $usage_gb; ?> GB</strong> of <strong><?php echo $quota_gb; ?> GB</strong></p>
-
-            <?php if ($quota_exceeded): ?>
-                <div class="alert alert-danger">🚫 You’ve exceeded your quota. Uploading is disabled.</div>
-            <?php endif; ?>
-
-            <form id="uploadForm" enctype="multipart/form-data" class="mb-4" <?php if ($quota_exceeded) echo 'style="pointer-events: none; opacity: 0.6;"'; ?>>
-                <div class="input-group mb-2">
-                    <input type="file" name="file" id="fileInput" class="form-control" required>
-                    <button type="submit" class="btn btn-primary">Upload</button>
-                </div>
-                <div class="progress" style="display: none;">
-                    <div class="progress-bar" role="progressbar" style="width: 0%">0%</div>
-                </div>
-                <div id="uploadStatus" class="mt-2"></div>
-            </form>
-        </div>
-
-        <div class="row">
-            <?php if (empty($files)): ?>
-                <p class="text-muted">No files uploaded yet.</p>
-            <?php else: ?>
-                <?php foreach ($files as $file): ?>
-                    <div class="col-md-4">
-                        <div class="card mb-3">
-                            <div class="card-body">
-                                <strong><?php echo htmlspecialchars($file); ?></strong><br>
-                                <a href="#">Download</a> | <a href="#">Delete</a>
-                            </div>
-                        </div>
-                    </div>
-                <?php endforeach; ?>
-            <?php endif; ?>
-        </div>
-
     </div>
 
+    <div class="mb-4" id="drag-drop-area"></div>
+
     <script>
-    document.getElementById('uploadForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        const form = e.target;
-        const fileInput = document.getElementById('fileInput');
-        const file = fileInput.files[0];
-        const formData = new FormData();
-        formData.append('file', file);
+    const uppy = new Uppy.Core({
+        restrictions: {
+            maxFileSize: 20 * 1024 * 1024 * 1024, // 20GB max
+        },
+        autoProceed: true
+    });
 
-        const xhr = new XMLHttpRequest();
-        xhr.open('POST', 'upload.php', true);
+    uppy.use(Uppy.Dashboard, {
+        inline: true,
+        target: '#drag-drop-area',
+        theme: 'dark',
+        proudlyDisplayPoweredByUppy: false
+    });
 
-        const progressContainer = document.querySelector('.progress');
-        const progressBar = document.querySelector('.progress-bar');
-        const status = document.getElementById('uploadStatus');
+    uppy.use(Uppy.XHRUpload, {
+        endpoint: '/api/upload_chunk.php',
+        formData: true,
+        bundle: false,
+        limit: 1
+    });
 
-        progressContainer.style.display = 'block';
-        progressBar.style.width = '0%';
-        progressBar.classList.remove('bg-success', 'bg-danger');
-        progressBar.textContent = '0%';
-        status.innerHTML = '';
+    uppy.on('complete', (result) => {
+        const files = result.successful.map(f => ({
+            name: f.name,
+            uploadId: f.meta.uploadId || '',
+            totalChunks: f.meta.totalChunks || '',
+        }));
 
-        xhr.upload.onprogress = function(e) {
-            if (e.lengthComputable) {
-                const percent = Math.round((e.loaded / e.total) * 100);
-                progressBar.style.width = percent + '%';
-                progressBar.textContent = percent + '%';
-            }
-        };
+        // Trigger finalization
+        files.forEach(file => {
+            fetch('/api/assemble_chunks.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(file)
+            }).then(r => r.text()).then(console.log);
+        });
 
-        xhr.onload = function() {
-            if (xhr.status === 200) {
-                status.innerHTML = '<span class="text-success">✅ Upload complete!</span>';
-                progressBar.classList.add('bg-success');
-                setTimeout(() => location.reload(), 1500);
-            } else {
-                status.innerHTML = '<span class="text-danger">❌ Upload failed.</span>';
-                progressBar.classList.add('bg-danger');
-            }
-        };
-
-        xhr.onerror = function() {
-            status.innerHTML = '<span class="text-danger">❌ Upload failed (connection error).</span>';
-            progressBar.classList.add('bg-danger');
-        };
-
-        xhr.send(formData);
+        alert('Upload complete!');
+        location.reload();
     });
     </script>
+
+    <hr>
+
+    <h4>Your Files</h4>
+    <ul>
+        <?php
+        if (is_dir($userFolder)) {
+            $files = array_diff(scandir($userFolder), ['.', '..']);
+            foreach ($files as $file) {
+                echo "<li>" . htmlspecialchars($file) . "</li>";
+            }
+        } else {
+            echo "<li>⚠️ No folder found for user.</li>";
+        }
+        ?>
+    </ul>
+</div>
+
 </body>
 </html>
