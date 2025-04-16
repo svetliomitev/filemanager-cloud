@@ -35,16 +35,24 @@ $db->exec("CREATE TABLE files (
     FOREIGN KEY(user_id) REFERENCES users(id)
 )");
 
-$db->exec("CREATE TABLE shares (
+$db->exec("CREATE TABLE shared_links (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    file_id INTEGER,
-    user_id INTEGER,
-    token TEXT UNIQUE,
-    password TEXT DEFAULT NULL,
-    expires_at TEXT DEFAULT NULL,
-    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY(file_id) REFERENCES files(id),
-    FOREIGN KEY(user_id) REFERENCES users(id)
+    token TEXT UNIQUE NOT NULL,
+    path TEXT NOT NULL,
+    is_folder INTEGER DEFAULT 0,
+    owner TEXT NOT NULL,
+    password_hash TEXT,
+    expires_at TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+)");
+
+$db->exec("CREATE TABLE share_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    owner TEXT NOT NULL,
+    path TEXT NOT NULL,
+    is_folder INTEGER DEFAULT 0,
+    token TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
 )");
 
 // 5. Load environment variables using Composer
@@ -57,19 +65,16 @@ try {
     die("❌ Failed to load .env: " . $e->getMessage());
 }
 
-// 6. Optional debug: Print loaded environment
-// echo "<pre>"; print_r($_ENV); echo "</pre>";
-
-// 7. Read admin config from .env
+// 6. Read admin config from .env
 $admin_user  = $_ENV['ADMIN_USER']  ?? 'admin';
 $admin_email = $_ENV['ADMIN_EMAIL'] ?? 'admin@bgdemo.top';
 $admin_pass  = $_ENV['ADMIN_PASS']  ?? 'S1neQU@n0n#9';
 $full_name   = $_ENV['ADMIN_NAME']  ?? 'Svetoslav Mitev';
 
-// 8. Hash password
+// 7. Hash password
 $hashed_pass = password_hash($admin_pass, PASSWORD_BCRYPT);
 
-// 9. Insert admin user
+// 8. Insert admin user
 $stmt = $db->prepare("INSERT INTO users (username, email, password, full_name, quota_gb) VALUES (?, ?, ?, ?, 999)");
 $stmt->bindValue(1, $admin_user);
 $stmt->bindValue(2, $admin_email);
