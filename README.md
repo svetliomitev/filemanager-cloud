@@ -26,7 +26,7 @@ Set credentials for the admin, mail relay, and default quota.
 3. **Build & Run**
 ```bash
 docker compose build --no-cache
-docker- ompose up -d
+docker compose up -d
 ```
 
 4. **First-Time Setup**
